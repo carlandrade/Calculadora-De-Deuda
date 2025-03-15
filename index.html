@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Préstamos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        input,
+        button {
+            display: block;
+            margin: 10px 0;
+            padding: 8px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Iniciar Sesión</h2>
+        <input type="text" id="username" placeholder="Usuario">
+        <input type="password" id="password" placeholder="Contraseña">
+        <button onclick="login()">Entrar</button>
+
+        <div id="loan-section" class="hidden">
+            <h2>Registrar Préstamo</h2>
+            <input type="number" id="loanAmount" placeholder="Monto del préstamo">
+            <input type="number" id="loanTerms" placeholder="Número de cuotas">
+            <input type="date" id="startDate" placeholder="Fecha de inicio">
+            <button onclick="calculateLoan()">Calcular Cuota</button>
+            <p id="monthlyPayment"></p>
+            <p id="remainingDebt"></p>
+
+            <h2>Registrar Pago</h2>
+            <input type="number" id="paymentAmount" placeholder="Monto pagado">
+            <input type="file" id="receiptUpload">
+            <button onclick="registerPayment()">Registrar Pago</button>
+
+            <h2>Historial de Pagos</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Cuota Mensual</th>
+                        <th>Interés</th>
+                        <th>Capital</th>
+                        <th>Monto Pagado</th>
+                        <th>Deuda Restante</th>
+                    </tr>
+                </thead>
+                <tbody id="paymentHistory"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let loanData = JSON.parse(localStorage.getItem("loanData")) || { balance: 0, monthlyPayment: 0, payments: [] };
+
+        function login() {
+            const user = document.getElementById("username").value;
+            const pass = document.getElementById("password").value;
+            if (user === "admin" && pass === "1234") {
+                document.getElementById("loan-section").classList.remove("hidden");
+                displayLoanData();
+            } else {
+                alert("Usuario o contraseña incorrectos");
+            }
+        }
+
+        function calculateLoan() {
+            const amount = parseFloat(document.getElementById("loanAmount").value);
+            const terms = parseInt(document.getElementById("loanTerms").value);
+            const startDate = document.getElementById("startDate").value;
+            const interestRate = 0.15 / 12;
+
+            const monthlyPayment = (amount * interestRate) / (1 - Math.pow(1 + interestRate, -terms));
+
+            loanData = { balance: amount, monthlyPayment, startDate, payments: [] };
+            localStorage.setItem("loanData", JSON.stringify(loanData));
+            displayLoanData();
+        }
+
+        function registerPayment() {
+            const payment = parseFloat(document.getElementById("paymentAmount").value);
+            if (payment > 0) {
+                const interest = loanData.balance * (0.15 / 12);
+                const capital = payment - interest;
+                loanData.balance -= capital;
+
+                const lastDate = loanData.payments.length > 0 ? new Date(loanData.payments[loanData.payments.length - 1].date) : new Date(loanData.startDate);
+                lastDate.setMonth(lastDate.getMonth() + 1);
+                const formattedDate = lastDate.toISOString().split('T')[0];
+
+                loanData.payments.push({
+                    date: formattedDate,
+                    monthlyPayment: loanData.monthlyPayment,
+                    interest: interest.toFixed(2),
+                    capital: capital.toFixed(2),
+                    paid: payment,
+                    remaining: loanData.balance.toFixed(2)
+                });
+
+                localStorage.setItem("loanData", JSON.stringify(loanData));
+                displayLoanData();
+            } else {
+                alert("Ingrese un monto válido");
+            }
+        }
+
+        function displayLoanData() {
+            document.getElementById("monthlyPayment").innerText = `Cuota mensual: ${loanData.monthlyPayment.toFixed(2)} COP`;
+            document.getElementById("remainingDebt").innerText = `Deuda restante: ${loanData.balance.toFixed(2)} COP`;
+
+            const tableBody = document.getElementById("paymentHistory");
+            tableBody.innerHTML = "";
+            loanData.payments.forEach(payment => {
+                const row = `<tr>
+                    <td>${payment.date}</td>
+                    <td>${payment.monthlyPayment.toFixed(2)}</td>
+                    <td>${payment.interest}</td>
+                    <td>${payment.capital}</td>
+                    <td>${payment.paid.toFixed(2)}</td>
+                    <td>${payment.remaining}</td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        window.onload = function () {
+            if (loanData.balance > 0) {
+                displayLoanData();
+            }
+        };
+    </script>
+</body>
+
+</html>
