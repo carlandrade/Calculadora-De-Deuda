@@ -43,12 +43,6 @@
         th {
             background-color: #f4f4f4;
         }
-
-        td input {
-            width: 100%;
-            border: none;
-            text-align: center;
-        }
     </style>
 </head>
 
@@ -71,7 +65,7 @@
 
             <h2>Conversor de Moneda</h2>
             <input type="number" id="euroRate" placeholder="Valor del Euro en COP">
-            <button onclick="convertToEuros()">Convertir a Euros</button>
+            <button onclick="displayLoanData()">Actualizar Valores en Euros</button>
             <p id="debtInEuros"></p>
 
             <h2>Registrar Pago</h2>
@@ -83,12 +77,12 @@
                 <thead>
                     <tr>
                         <th>Fecha</th>
-                        <th>Cuota Mensual (COP)</th>
+                        <th>Cuota Mensual (COP / EUR)</th>
                         <th>Interés (%)</th>
-                        <th>Interés Pagado (COP)</th>
-                        <th>Capital Pagado (COP)</th>
-                        <th>Monto Pagado (COP)</th>
-                        <th>Deuda Restante (COP)</th>
+                        <th>Interés Pagado (COP / EUR)</th>
+                        <th>Capital Pagado (COP / EUR)</th>
+                        <th>Monto Pagado (COP / EUR)</th>
+                        <th>Deuda Restante (COP / EUR)</th>
                     </tr>
                 </thead>
                 <tbody id="paymentHistory"></tbody>
@@ -111,15 +105,15 @@
         }
 
         function calculateLoan() {
-            const amount = parseFloat(document.getElementById("loanAmount").value);
+            const amount = parseInt(document.getElementById("loanAmount").value);
             const terms = parseInt(document.getElementById("loanTerms").value);
             const interestRate = parseFloat(document.getElementById("interestRate").value) / 100;
             const monthlyInterestRate = interestRate / 12;
 
-            const monthlyPayment = (amount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -terms));
+            const monthlyPayment = Math.round((amount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -terms)));
 
             loanData.balance += amount;
-            loanData.monthlyPayment = Math.round(monthlyPayment);
+            loanData.monthlyPayment = monthlyPayment;
             loanData.interestRate = interestRate * 100;
 
             localStorage.setItem("loanData", JSON.stringify(loanData));
@@ -150,31 +144,22 @@
             }
         }
 
-        function convertToEuros() {
-            const euroRate = parseFloat(document.getElementById("euroRate").value);
-            if (euroRate > 0) {
-                const debtInEuros = Math.round(loanData.balance / euroRate);
-                document.getElementById("debtInEuros").innerText = `Deuda en Euros: €${debtInEuros}`;
-            } else {
-                alert("Ingrese un valor válido para el Euro");
-            }
-        }
-
         function displayLoanData() {
-            document.getElementById("monthlyPayment").innerText = `Cuota mensual: ${loanData.monthlyPayment} COP`;
-            document.getElementById("remainingDebt").innerText = `Deuda restante: ${loanData.balance} COP`;
+            const euroRate = parseFloat(document.getElementById("euroRate").value) || 1;
+            document.getElementById("monthlyPayment").innerText = `Cuota mensual: $${loanData.monthlyPayment.toLocaleString()}`;
+            document.getElementById("remainingDebt").innerText = `Deuda restante: $${loanData.balance.toLocaleString()}`;
 
             const tableBody = document.getElementById("paymentHistory");
             tableBody.innerHTML = "";
             loanData.payments.forEach(payment => {
                 const row = `<tr>
                     <td>${payment.date}</td>
-                    <td>${payment.monthlyPayment}</td>
+                    <td>$${payment.monthlyPayment.toLocaleString()} / €${Math.round(payment.monthlyPayment / euroRate)}</td>
                     <td>${loanData.interestRate}</td>
-                    <td>${payment.interest}</td>
-                    <td>${payment.capital}</td>
-                    <td>${payment.paid}</td>
-                    <td>${payment.remaining}</td>
+                    <td>$${payment.interest.toLocaleString()} / €${Math.round(payment.interest / euroRate)}</td>
+                    <td>$${payment.capital.toLocaleString()} / €${Math.round(payment.capital / euroRate)}</td>
+                    <td>$${payment.paid.toLocaleString()} / €${Math.round(payment.paid / euroRate)}</td>
+                    <td>$${payment.remaining.toLocaleString()} / €${Math.round(payment.remaining / euroRate)}</td>
                 </tr>`;
                 tableBody.innerHTML += row;
             });
