@@ -43,6 +43,14 @@
         th {
             background-color: #f4f4f4;
         }
+
+        .delete-btn {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -76,6 +84,7 @@
             <table>
                 <thead>
                     <tr>
+                        <th>Cuota #</th>
                         <th>Fecha</th>
                         <th>Cuota Mensual (COP / EUR)</th>
                         <th>Interés (%)</th>
@@ -83,6 +92,7 @@
                         <th>Capital Pagado (COP / EUR)</th>
                         <th>Monto Pagado (COP / EUR)</th>
                         <th>Deuda Restante (COP / EUR)</th>
+                        <th>Acción</th>
                     </tr>
                 </thead>
                 <tbody id="paymentHistory"></tbody>
@@ -92,6 +102,14 @@
 
     <script>
         let loanData = JSON.parse(localStorage.getItem("loanData")) || { balance: 0, monthlyPayment: 0, interestRate: 15, payments: [] };
+
+        function formatCurrency(value) {
+            return "$" + value.toLocaleString("es-CO").replace(/,/g, ".");
+        }
+
+        function formatEuro(value, euroRate) {
+            return "€" + Math.round(value / euroRate);
+        }
 
         function login() {
             const user = document.getElementById("username").value;
@@ -144,22 +162,29 @@
             }
         }
 
+        function deletePayment(index) {
+            if (confirm("¿Seguro que quiere borrar esta cuota?")) {
+                loanData.payments.splice(index, 1);
+                localStorage.setItem("loanData", JSON.stringify(loanData));
+                displayLoanData();
+            }
+        }
+
         function displayLoanData() {
             const euroRate = parseFloat(document.getElementById("euroRate").value) || 1;
-            document.getElementById("monthlyPayment").innerText = `Cuota mensual: $${loanData.monthlyPayment.toLocaleString()}`;
-            document.getElementById("remainingDebt").innerText = `Deuda restante: $${loanData.balance.toLocaleString()}`;
-
             const tableBody = document.getElementById("paymentHistory");
             tableBody.innerHTML = "";
-            loanData.payments.forEach(payment => {
+            loanData.payments.forEach((payment, index) => {
                 const row = `<tr>
+                    <td>${index + 1}</td>
                     <td>${payment.date}</td>
-                    <td>$${payment.monthlyPayment.toLocaleString()} / €${Math.round(payment.monthlyPayment / euroRate)}</td>
+                    <td>${formatCurrency(payment.monthlyPayment)} / ${formatEuro(payment.monthlyPayment, euroRate)}</td>
                     <td>${loanData.interestRate}</td>
-                    <td>$${payment.interest.toLocaleString()} / €${Math.round(payment.interest / euroRate)}</td>
-                    <td>$${payment.capital.toLocaleString()} / €${Math.round(payment.capital / euroRate)}</td>
-                    <td>$${payment.paid.toLocaleString()} / €${Math.round(payment.paid / euroRate)}</td>
-                    <td>$${payment.remaining.toLocaleString()} / €${Math.round(payment.remaining / euroRate)}</td>
+                    <td>${formatCurrency(payment.interest)} / ${formatEuro(payment.interest, euroRate)}</td>
+                    <td>${formatCurrency(payment.capital)} / ${formatEuro(payment.capital, euroRate)}</td>
+                    <td>${formatCurrency(payment.paid)} / ${formatEuro(payment.paid, euroRate)}</td>
+                    <td>${formatCurrency(payment.remaining)} / ${formatEuro(payment.remaining, euroRate)}</td>
+                    <td><button class='delete-btn' onclick='deletePayment(${index})'>Borrar</button></td>
                 </tr>`;
                 tableBody.innerHTML += row;
             });
