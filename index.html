@@ -43,6 +43,12 @@
         th {
             background-color: #f4f4f4;
         }
+
+        td input {
+            width: 100%;
+            border: none;
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -57,15 +63,11 @@
             <h2>Registrar Préstamo</h2>
             <input type="number" id="loanAmount" placeholder="Monto del préstamo">
             <input type="number" id="loanTerms" placeholder="Número de cuotas">
+            <input type="number" id="interestRate" placeholder="Tasa de interés (%)" value="15">
             <input type="date" id="startDate" placeholder="Fecha de inicio">
             <button onclick="calculateLoan()">Calcular Cuota</button>
             <p id="monthlyPayment"></p>
             <p id="remainingDebt"></p>
-
-            <h2>Registrar Pago</h2>
-            <input type="number" id="paymentAmount" placeholder="Monto pagado">
-            <input type="file" id="receiptUpload">
-            <button onclick="registerPayment()">Registrar Pago</button>
 
             <h2>Historial de Pagos</h2>
             <table>
@@ -73,8 +75,9 @@
                     <tr>
                         <th>Fecha</th>
                         <th>Cuota Mensual</th>
-                        <th>Interés</th>
-                        <th>Capital</th>
+                        <th>Interés (%)</th>
+                        <th>Interés Pagado</th>
+                        <th>Capital Pagado</th>
                         <th>Monto Pagado</th>
                         <th>Deuda Restante</th>
                     </tr>
@@ -85,7 +88,7 @@
     </div>
 
     <script>
-        let loanData = JSON.parse(localStorage.getItem("loanData")) || { balance: 0, monthlyPayment: 0, payments: [] };
+        let loanData = JSON.parse(localStorage.getItem("loanData")) || { balance: 0, monthlyPayment: 0, interestRate: 15, payments: [] };
 
         function login() {
             const user = document.getElementById("username").value;
@@ -101,41 +104,15 @@
         function calculateLoan() {
             const amount = parseFloat(document.getElementById("loanAmount").value);
             const terms = parseInt(document.getElementById("loanTerms").value);
+            const interestRate = parseFloat(document.getElementById("interestRate").value) / 100;
             const startDate = document.getElementById("startDate").value;
-            const interestRate = 0.15 / 12;
+            const monthlyInterestRate = interestRate / 12;
 
-            const monthlyPayment = (amount * interestRate) / (1 - Math.pow(1 + interestRate, -terms));
+            const monthlyPayment = (amount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -terms));
 
-            loanData = { balance: amount, monthlyPayment, startDate, payments: [] };
+            loanData = { balance: amount, monthlyPayment, interestRate: interestRate * 100, startDate, payments: [] };
             localStorage.setItem("loanData", JSON.stringify(loanData));
             displayLoanData();
-        }
-
-        function registerPayment() {
-            const payment = parseFloat(document.getElementById("paymentAmount").value);
-            if (payment > 0) {
-                const interest = loanData.balance * (0.15 / 12);
-                const capital = payment - interest;
-                loanData.balance -= capital;
-
-                const lastDate = loanData.payments.length > 0 ? new Date(loanData.payments[loanData.payments.length - 1].date) : new Date(loanData.startDate);
-                lastDate.setMonth(lastDate.getMonth() + 1);
-                const formattedDate = lastDate.toISOString().split('T')[0];
-
-                loanData.payments.push({
-                    date: formattedDate,
-                    monthlyPayment: loanData.monthlyPayment,
-                    interest: interest.toFixed(2),
-                    capital: capital.toFixed(2),
-                    paid: payment,
-                    remaining: loanData.balance.toFixed(2)
-                });
-
-                localStorage.setItem("loanData", JSON.stringify(loanData));
-                displayLoanData();
-            } else {
-                alert("Ingrese un monto válido");
-            }
         }
 
         function displayLoanData() {
@@ -144,17 +121,35 @@
 
             const tableBody = document.getElementById("paymentHistory");
             tableBody.innerHTML = "";
-            loanData.payments.forEach(payment => {
+
+            let balance = loanData.balance;
+            let date = new Date(loanData.startDate);
+            const monthlyInterestRate = loanData.interestRate / 100 / 12;
+
+            for (let i = 0; i < loanData.payments.length; i++) {
+                const interest = balance * monthlyInterestRate;
+                const capital = loanData.monthlyPayment - interest;
+                balance -= capital;
+                date.setMonth(date.getMonth() + 1);
+
                 const row = `<tr>
-                    <td>${payment.date}</td>
-                    <td>${payment.monthlyPayment.toFixed(2)}</td>
-                    <td>${payment.interest}</td>
-                    <td>${payment.capital}</td>
-                    <td>${payment.paid.toFixed(2)}</td>
-                    <td>${payment.remaining}</td>
+                    <td>${date.toISOString().split('T')[0]}</td>
+                    <td><input type="number" value="${loanData.monthlyPayment.toFixed(2)}"></td>
+                    <td><input type="number" value="${loanData.interestRate.toFixed(2)}"></td>
+                    <td>${interest.toFixed(2)}</td>
+                    <td>${capital.toFixed(2)}</td>
+                    <td><input type="number" value="${loanData.monthlyPayment.toFixed(2)}" onchange="updatePayment(${i}, this.value)"></td>
+                    <td>${balance.toFixed(2)}</td>
                 </tr>`;
+
                 tableBody.innerHTML += row;
-            });
+            }
+        }
+
+        function updatePayment(index, newValue) {
+            loanData.payments[index].paid = parseFloat(newValue);
+            localStorage.setItem("loanData", JSON.stringify(loanData));
+            displayLoanData();
         }
 
         window.onload = function () {
