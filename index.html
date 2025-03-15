@@ -69,6 +69,10 @@
             <p id="monthlyPayment"></p>
             <p id="remainingDebt"></p>
 
+            <h2>Registrar Pago</h2>
+            <input type="number" id="paymentAmount" placeholder="Monto pagado">
+            <button onclick="registerPayment()">Registrar Pago</button>
+
             <h2>Historial de Pagos</h2>
             <table>
                 <thead>
@@ -111,40 +115,55 @@
             const monthlyPayment = (amount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -terms));
 
             loanData = { balance: amount, monthlyPayment, interestRate: interestRate * 100, startDate, payments: [] };
-            for (let i = 0; i < terms; i++) {
-                loanData.payments.push({ date: "", monthlyPayment: monthlyPayment.toFixed(2), interest: "", capital: "", paid: "", remaining: amount.toFixed(2) });
-            }
             localStorage.setItem("loanData", JSON.stringify(loanData));
             displayLoanData();
+        }
+
+        function registerPayment() {
+            const paymentAmount = parseFloat(document.getElementById("paymentAmount").value);
+            if (paymentAmount > 0) {
+                let lastPaymentDate = loanData.payments.length > 0 ? new Date(loanData.payments[loanData.payments.length - 1].date) : new Date(loanData.startDate);
+                lastPaymentDate.setMonth(lastPaymentDate.getMonth() + 1);
+
+                const interest = loanData.balance * (loanData.interestRate / 100 / 12);
+                const capital = paymentAmount - interest;
+                loanData.balance -= capital;
+
+                loanData.payments.push({
+                    date: lastPaymentDate.toISOString().split('T')[0],
+                    monthlyPayment: loanData.monthlyPayment,
+                    interest: interest.toFixed(2),
+                    capital: capital.toFixed(2),
+                    paid: paymentAmount,
+                    remaining: loanData.balance.toFixed(2)
+                });
+
+                localStorage.setItem("loanData", JSON.stringify(loanData));
+                displayLoanData();
+            } else {
+                alert("Ingrese un monto válido");
+            }
         }
 
         function displayLoanData() {
+            document.getElementById("monthlyPayment").innerText = `Cuota mensual: ${loanData.monthlyPayment.toFixed(2)} COP`;
+            document.getElementById("remainingDebt").innerText = `Deuda restante: ${loanData.balance.toFixed(2)} COP`;
+
             const tableBody = document.getElementById("paymentHistory");
             tableBody.innerHTML = "";
 
-            loanData.payments.forEach((payment, index) => {
+            loanData.payments.forEach(payment => {
                 const row = `<tr>
-                    <td><input type="date" value="${payment.date}" onchange="updatePayment(${index}, 'date', this.value)"></td>
-                    <td><input type="number" value="${payment.monthlyPayment}" onchange="updatePayment(${index}, 'monthlyPayment', this.value)"></td>
-                    <td><input type="number" value="${loanData.interestRate}" onchange="updateInterest(this.value)"></td>
-                    <td><input type="number" value="${payment.interest}" onchange="updatePayment(${index}, 'interest', this.value)"></td>
-                    <td><input type="number" value="${payment.capital}" onchange="updatePayment(${index}, 'capital', this.value)"></td>
-                    <td><input type="number" value="${payment.paid}" onchange="updatePayment(${index}, 'paid', this.value)"></td>
-                    <td><input type="number" value="${payment.remaining}" onchange="updatePayment(${index}, 'remaining', this.value)"></td>
+                    <td>${payment.date}</td>
+                    <td>${payment.monthlyPayment.toFixed(2)}</td>
+                    <td>${loanData.interestRate.toFixed(2)}</td>
+                    <td>${payment.interest}</td>
+                    <td>${payment.capital}</td>
+                    <td>${payment.paid.toFixed(2)}</td>
+                    <td>${payment.remaining}</td>
                 </tr>`;
                 tableBody.innerHTML += row;
             });
-        }
-
-        function updatePayment(index, field, value) {
-            loanData.payments[index][field] = value;
-            localStorage.setItem("loanData", JSON.stringify(loanData));
-        }
-
-        function updateInterest(value) {
-            loanData.interestRate = value;
-            localStorage.setItem("loanData", JSON.stringify(loanData));
-            displayLoanData();
         }
 
         window.onload = function () {
