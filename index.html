@@ -111,43 +111,38 @@
             const monthlyPayment = (amount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -terms));
 
             loanData = { balance: amount, monthlyPayment, interestRate: interestRate * 100, startDate, payments: [] };
+            for (let i = 0; i < terms; i++) {
+                loanData.payments.push({ date: "", monthlyPayment: monthlyPayment.toFixed(2), interest: "", capital: "", paid: "", remaining: amount.toFixed(2) });
+            }
             localStorage.setItem("loanData", JSON.stringify(loanData));
             displayLoanData();
         }
 
         function displayLoanData() {
-            document.getElementById("monthlyPayment").innerText = `Cuota mensual: ${loanData.monthlyPayment.toFixed(2)} COP`;
-            document.getElementById("remainingDebt").innerText = `Deuda restante: ${loanData.balance.toFixed(2)} COP`;
-
             const tableBody = document.getElementById("paymentHistory");
             tableBody.innerHTML = "";
 
-            let balance = loanData.balance;
-            let date = new Date(loanData.startDate);
-            const monthlyInterestRate = loanData.interestRate / 100 / 12;
-
-            for (let i = 0; i < loanData.payments.length; i++) {
-                const interest = balance * monthlyInterestRate;
-                const capital = loanData.monthlyPayment - interest;
-                balance -= capital;
-                date.setMonth(date.getMonth() + 1);
-
+            loanData.payments.forEach((payment, index) => {
                 const row = `<tr>
-                    <td>${date.toISOString().split('T')[0]}</td>
-                    <td><input type="number" value="${loanData.monthlyPayment.toFixed(2)}"></td>
-                    <td><input type="number" value="${loanData.interestRate.toFixed(2)}"></td>
-                    <td>${interest.toFixed(2)}</td>
-                    <td>${capital.toFixed(2)}</td>
-                    <td><input type="number" value="${loanData.monthlyPayment.toFixed(2)}" onchange="updatePayment(${i}, this.value)"></td>
-                    <td>${balance.toFixed(2)}</td>
+                    <td><input type="date" value="${payment.date}" onchange="updatePayment(${index}, 'date', this.value)"></td>
+                    <td><input type="number" value="${payment.monthlyPayment}" onchange="updatePayment(${index}, 'monthlyPayment', this.value)"></td>
+                    <td><input type="number" value="${loanData.interestRate}" onchange="updateInterest(this.value)"></td>
+                    <td><input type="number" value="${payment.interest}" onchange="updatePayment(${index}, 'interest', this.value)"></td>
+                    <td><input type="number" value="${payment.capital}" onchange="updatePayment(${index}, 'capital', this.value)"></td>
+                    <td><input type="number" value="${payment.paid}" onchange="updatePayment(${index}, 'paid', this.value)"></td>
+                    <td><input type="number" value="${payment.remaining}" onchange="updatePayment(${index}, 'remaining', this.value)"></td>
                 </tr>`;
-
                 tableBody.innerHTML += row;
-            }
+            });
         }
 
-        function updatePayment(index, newValue) {
-            loanData.payments[index].paid = parseFloat(newValue);
+        function updatePayment(index, field, value) {
+            loanData.payments[index][field] = value;
+            localStorage.setItem("loanData", JSON.stringify(loanData));
+        }
+
+        function updateInterest(value) {
+            loanData.interestRate = value;
             localStorage.setItem("loanData", JSON.stringify(loanData));
             displayLoanData();
         }
