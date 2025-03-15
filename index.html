@@ -61,16 +61,21 @@
 
         <div id="loan-section" class="hidden">
             <h2>Registrar Préstamo</h2>
-            <input type="number" id="loanAmount" placeholder="Monto del préstamo">
+            <input type="number" id="loanAmount" placeholder="Monto del préstamo en COP">
             <input type="number" id="loanTerms" placeholder="Número de cuotas">
-            <input type="number" id="interestRate" placeholder="Tasa de interés (%)" value="15">
+            <input type="number" id="interestRate" placeholder="Tasa de interés anual (%)" value="15">
             <input type="date" id="startDate" placeholder="Fecha de inicio">
             <button onclick="calculateLoan()">Calcular Cuota</button>
             <p id="monthlyPayment"></p>
             <p id="remainingDebt"></p>
 
+            <h2>Conversor de Moneda</h2>
+            <input type="number" id="euroRate" placeholder="Valor del Euro en COP">
+            <button onclick="convertToEuros()">Convertir a Euros</button>
+            <p id="debtInEuros"></p>
+
             <h2>Registrar Pago</h2>
-            <input type="number" id="paymentAmount" placeholder="Monto pagado">
+            <input type="number" id="paymentAmount" placeholder="Monto pagado en COP">
             <button onclick="registerPayment()">Registrar Pago</button>
 
             <h2>Historial de Pagos</h2>
@@ -78,12 +83,12 @@
                 <thead>
                     <tr>
                         <th>Fecha</th>
-                        <th>Cuota Mensual</th>
+                        <th>Cuota Mensual (COP)</th>
                         <th>Interés (%)</th>
-                        <th>Interés Pagado</th>
-                        <th>Capital Pagado</th>
-                        <th>Monto Pagado</th>
-                        <th>Deuda Restante</th>
+                        <th>Interés Pagado (COP)</th>
+                        <th>Capital Pagado (COP)</th>
+                        <th>Monto Pagado (COP)</th>
+                        <th>Deuda Restante (COP)</th>
                     </tr>
                 </thead>
                 <tbody id="paymentHistory"></tbody>
@@ -109,33 +114,33 @@
             const amount = parseFloat(document.getElementById("loanAmount").value);
             const terms = parseInt(document.getElementById("loanTerms").value);
             const interestRate = parseFloat(document.getElementById("interestRate").value) / 100;
-            const startDate = document.getElementById("startDate").value;
             const monthlyInterestRate = interestRate / 12;
 
             const monthlyPayment = (amount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -terms));
 
-            loanData = { balance: amount, monthlyPayment, interestRate: interestRate * 100, startDate, payments: [] };
+            loanData.balance += amount;
+            loanData.monthlyPayment = Math.round(monthlyPayment);
+            loanData.interestRate = interestRate * 100;
+
             localStorage.setItem("loanData", JSON.stringify(loanData));
             displayLoanData();
         }
 
         function registerPayment() {
-            const paymentAmount = parseFloat(document.getElementById("paymentAmount").value);
+            const paymentAmount = parseInt(document.getElementById("paymentAmount").value);
             if (paymentAmount > 0) {
-                let lastPaymentDate = loanData.payments.length > 0 ? new Date(loanData.payments[loanData.payments.length - 1].date) : new Date(loanData.startDate);
-                lastPaymentDate.setMonth(lastPaymentDate.getMonth() + 1);
-
-                const interest = loanData.balance * (loanData.interestRate / 100 / 12);
+                const interest = Math.round(loanData.balance * (loanData.interestRate / 100 / 12));
                 const capital = paymentAmount - interest;
                 loanData.balance -= capital;
 
+                const today = new Date().toISOString().split('T')[0];
                 loanData.payments.push({
-                    date: lastPaymentDate.toISOString().split('T')[0],
+                    date: today,
                     monthlyPayment: loanData.monthlyPayment,
-                    interest: interest.toFixed(2),
-                    capital: capital.toFixed(2),
+                    interest: interest,
+                    capital: capital,
                     paid: paymentAmount,
-                    remaining: loanData.balance.toFixed(2)
+                    remaining: loanData.balance
                 });
 
                 localStorage.setItem("loanData", JSON.stringify(loanData));
@@ -145,32 +150,35 @@
             }
         }
 
+        function convertToEuros() {
+            const euroRate = parseFloat(document.getElementById("euroRate").value);
+            if (euroRate > 0) {
+                const debtInEuros = Math.round(loanData.balance / euroRate);
+                document.getElementById("debtInEuros").innerText = `Deuda en Euros: €${debtInEuros}`;
+            } else {
+                alert("Ingrese un valor válido para el Euro");
+            }
+        }
+
         function displayLoanData() {
-            document.getElementById("monthlyPayment").innerText = `Cuota mensual: ${loanData.monthlyPayment.toFixed(2)} COP`;
-            document.getElementById("remainingDebt").innerText = `Deuda restante: ${loanData.balance.toFixed(2)} COP`;
+            document.getElementById("monthlyPayment").innerText = `Cuota mensual: ${loanData.monthlyPayment} COP`;
+            document.getElementById("remainingDebt").innerText = `Deuda restante: ${loanData.balance} COP`;
 
             const tableBody = document.getElementById("paymentHistory");
             tableBody.innerHTML = "";
-
             loanData.payments.forEach(payment => {
                 const row = `<tr>
                     <td>${payment.date}</td>
-                    <td>${payment.monthlyPayment.toFixed(2)}</td>
-                    <td>${loanData.interestRate.toFixed(2)}</td>
+                    <td>${payment.monthlyPayment}</td>
+                    <td>${loanData.interestRate}</td>
                     <td>${payment.interest}</td>
                     <td>${payment.capital}</td>
-                    <td>${payment.paid.toFixed(2)}</td>
+                    <td>${payment.paid}</td>
                     <td>${payment.remaining}</td>
                 </tr>`;
                 tableBody.innerHTML += row;
             });
         }
-
-        window.onload = function () {
-            if (loanData.balance > 0) {
-                displayLoanData();
-            }
-        };
     </script>
 </body>
 
