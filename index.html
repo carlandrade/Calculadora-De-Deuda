@@ -54,7 +54,7 @@
     </style>
 </head>
 
-<body>
+<body onload="checkLoginStatus()">
     <div class="container">
         <h2>Iniciar Sesión</h2>
         <input type="text" id="username" placeholder="Usuario">
@@ -107,6 +107,23 @@
 
         function formatEuro(value, euroRate) {
             return "€" + Math.round(value / euroRate).toLocaleString("es-CO");
+        }
+
+        function login() {
+            const user = document.getElementById("username").value;
+            const pass = document.getElementById("password").value;
+            if (user === "admin" && pass === "1234") {
+                localStorage.setItem("loggedIn", "true");
+                document.getElementById("loan-section").classList.remove("hidden");
+            } else {
+                alert("Usuario o contraseña incorrectos");
+            }
+        }
+
+        function checkLoginStatus() {
+            if (localStorage.getItem("loggedIn") === "true") {
+                document.getElementById("loan-section").classList.remove("hidden");
+            }
         }
 
         function previewLoan() {
