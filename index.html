@@ -101,6 +101,8 @@
     </div>
 
     <script>
+        let loanData = JSON.parse(localStorage.getItem("loanData")) || { balance: 0, monthlyPayment: 0, interestRate: 15, payments: [] };
+
         function formatCurrency(value) {
             return "$" + value.toLocaleString("es-CO").replace(/,/g, ".");
         }
@@ -115,41 +117,53 @@
             if (user === "admin" && pass === "1234") {
                 localStorage.setItem("loggedIn", "true");
                 document.getElementById("loan-section").classList.remove("hidden");
+                displayLoanData();
             } else {
                 alert("Usuario o contraseña incorrectos");
             }
         }
 
-        function checkLoginStatus() {
-            if (localStorage.getItem("loggedIn") === "true") {
-                document.getElementById("loan-section").classList.remove("hidden");
+        function registerPayment() {
+            const paymentAmount = parseInt(document.getElementById("paymentAmount").value);
+            if (paymentAmount > 0) {
+                const interest = Math.round(loanData.balance * (loanData.interestRate / 100 / 12));
+                const capital = paymentAmount - interest;
+                loanData.balance -= capital;
+
+                const today = new Date().toISOString().split('T')[0];
+                loanData.payments.push({
+                    date: today,
+                    monthlyPayment: loanData.monthlyPayment,
+                    interest: interest,
+                    capital: capital,
+                    paid: paymentAmount,
+                    remaining: loanData.balance
+                });
+
+                localStorage.setItem("loanData", JSON.stringify(loanData));
+                displayLoanData();
+            } else {
+                alert("Ingrese un monto válido");
             }
         }
 
-        function previewLoan() {
-            const amount = parseFloat(document.getElementById("loanAmount").value) || 0;
-            const terms = parseInt(document.getElementById("loanTerms").value) || 1;
-            const interestRate = parseFloat(document.getElementById("interestRate").value) / 100 || 0.15;
-            const monthlyInterestRate = interestRate / 12;
-
-            if (amount > 0 && terms > 0) {
-                const monthlyPayment = Math.round((amount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -terms)));
-                document.getElementById("monthlyPaymentPreview").innerText = `Cuota mensual estimada: ${formatCurrency(monthlyPayment)}`;
-                document.getElementById("monthlyPaymentPreview").setAttribute("data-value", monthlyPayment);
-                updateEuroPreview();
-            }
-        }
-
-        function updateEuroPreview() {
+        function displayLoanData() {
             const euroRate = parseFloat(document.getElementById("euroRate").value) || 1;
-            const monthlyPayment = parseInt(document.getElementById("monthlyPaymentPreview").getAttribute("data-value")) || 0;
-            if (euroRate > 0) {
-                document.getElementById("monthlyPaymentInEuros").innerText = `Cuota mensual estimada en euros: ${formatEuro(monthlyPayment, euroRate)}`;
-            }
-        }
-
-        function calculateLoan() {
-            previewLoan();
+            const tableBody = document.getElementById("paymentHistory");
+            tableBody.innerHTML = "";
+            loanData.payments.forEach((payment, index) => {
+                const row = `<tr>
+                    <td>${index + 1}</td>
+                    <td>${payment.date}</td>
+                    <td>${formatCurrency(payment.monthlyPayment)} / ${formatEuro(payment.monthlyPayment, euroRate)}</td>
+                    <td>${loanData.interestRate}%</td>
+                    <td>${formatCurrency(payment.interest)} / ${formatEuro(payment.interest, euroRate)}</td>
+                    <td>${formatCurrency(payment.capital)} / ${formatEuro(payment.capital, euroRate)}</td>
+                    <td>${formatCurrency(payment.paid)} / ${formatEuro(payment.paid, euroRate)}</td>
+                    <td>${formatCurrency(payment.remaining)} / ${formatEuro(payment.remaining, euroRate)}</td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
         }
     </script>
 </body>
