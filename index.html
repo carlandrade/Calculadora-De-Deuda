@@ -109,6 +109,18 @@
             return "€" + Math.round(value / euroRate).toLocaleString("es-CO");
         }
 
+        function login() {
+            const user = document.getElementById("username").value;
+            const pass = document.getElementById("password").value;
+            if (user === "admin" && pass === "1234") {
+                document.getElementById("loan-section").classList.remove("hidden");
+                document.getElementById("username").value = "";
+                document.getElementById("password").value = "";
+            } else {
+                alert("Usuario o contraseña incorrectos");
+            }
+        }
+
         function calculateLoan() {
             const amount = parseInt(document.getElementById("loanAmount").value);
             const terms = parseInt(document.getElementById("loanTerms").value);
@@ -118,6 +130,7 @@
             const monthlyPayment = Math.round((amount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -terms)));
 
             document.getElementById("monthlyPayment").innerText = `Cuota mensual estimada: ${formatCurrency(monthlyPayment)}`;
+            document.getElementById("loan-section").classList.remove("hidden");
         }
 
         function displayLoanData() {
