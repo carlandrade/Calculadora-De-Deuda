@@ -101,6 +101,8 @@
     </div>
 
     <script>
+        let loanData = JSON.parse(localStorage.getItem("loanData")) || { balance: 0, monthlyPayment: 0, interestRate: 15, payments: [] };
+
         function formatCurrency(value) {
             return "$" + value.toLocaleString("es-CO").replace(/,/g, ".");
         }
@@ -114,8 +116,7 @@
             const pass = document.getElementById("password").value;
             if (user === "admin" && pass === "1234") {
                 document.getElementById("loan-section").classList.remove("hidden");
-                document.getElementById("username").value = "";
-                document.getElementById("password").value = "";
+                displayLoanData();
             } else {
                 alert("Usuario o contraseña incorrectos");
             }
@@ -129,8 +130,33 @@
 
             const monthlyPayment = Math.round((amount * monthlyInterestRate) / (1 - Math.pow(1 + monthlyInterestRate, -terms)));
 
-            document.getElementById("monthlyPayment").innerText = `Cuota mensual estimada: ${formatCurrency(monthlyPayment)}`;
-            document.getElementById("loan-section").classList.remove("hidden");
+            loanData = { balance: amount, monthlyPayment: monthlyPayment, interestRate: interestRate * 100, payments: [] };
+            localStorage.setItem("loanData", JSON.stringify(loanData));
+            displayLoanData();
+        }
+
+        function registerPayment() {
+            const paymentAmount = parseInt(document.getElementById("paymentAmount").value);
+            if (paymentAmount > 0) {
+                const interest = Math.round(loanData.balance * (loanData.interestRate / 100 / 12));
+                const capital = paymentAmount - interest;
+                loanData.balance -= capital;
+
+                const today = new Date().toISOString().split('T')[0];
+                loanData.payments.push({
+                    date: today,
+                    monthlyPayment: loanData.monthlyPayment,
+                    interest: interest,
+                    capital: capital,
+                    paid: paymentAmount,
+                    remaining: loanData.balance
+                });
+
+                localStorage.setItem("loanData", JSON.stringify(loanData));
+                displayLoanData();
+            } else {
+                alert("Ingrese un monto válido");
+            }
         }
 
         function displayLoanData() {
@@ -147,7 +173,6 @@
                     <td>${formatCurrency(payment.capital)} / ${formatEuro(payment.capital, euroRate)}</td>
                     <td>${formatCurrency(payment.paid)} / ${formatEuro(payment.paid, euroRate)}</td>
                     <td>${formatCurrency(payment.remaining)} / ${formatEuro(payment.remaining, euroRate)}</td>
-                    <td><button class='delete-btn' onclick='deletePayment(${index})'>Borrar</button></td>
                 </tr>`;
                 tableBody.innerHTML += row;
             });
